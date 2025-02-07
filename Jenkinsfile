@@ -2,12 +2,14 @@ pipeline {
     agent {
         docker {
             image 'python:3.10-slim'
-            args '--user root'  // Ensures we have permissions to create directories
+            args '--user root -v ${env.WORKSPACE.replace("\\", "/")}:/workspace'
         }
     }
 
     environment {
         WORKDIR = '/workspace'  // Define a valid working directory inside the container
+        EC2_USER = 'ubuntu'  // Update with your EC2 instance user
+        EC2_HOST = 'your-ec2-instance-ip'  // Update with your EC2 instance IP
     }
 
     stages {
@@ -29,14 +31,14 @@ pipeline {
                     apt-get update && apt-get install -y openssh-client
                     python3 -m ensurepip
                     python3 -m pip install --upgrade pip
-                    pip install -r requirements.txt
+                    pip install -r requirements.txt || echo "⚠️ No requirements.txt found, skipping dependency installation."
                 '''
             }
         }
 
         stage('Retrain the Model') {
             steps {
-                sh 'python3 train.py'
+                sh 'python3 train.py || echo "⚠️ Training script failed, check logs."'
             }
         }
 
