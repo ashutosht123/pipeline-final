@@ -2,12 +2,12 @@ pipeline {
     agent {
         docker {
             image 'python:3.10-slim'
-            args '--user root -w /workspace'  // Set working directory
+            args '--user root'  // Removed -w /workspace to use the default working directory
         }
     }
 
     environment {
-        DOCKER_HOST = 'tcp://localhost:2375'  // Docker host for Jenkins
+        DOCKER_HOST = 'npipe:////./pipe/docker_engine'  // Adjusted for Windows Docker Desktop
         EC2_HOST = credentials('EC2_HOST')          
         EC2_USER = credentials('EC2_USER')          
         SSH_KEY_ID = credentials('8016f4f1-3a1c-439b-b5fa-b4cde16c68bd')  
@@ -16,7 +16,7 @@ pipeline {
     stages {
         stage('Prepare') {
             steps {
-                sh 'mkdir -p /workspace'  // Ensure workspace exists
+                sh 'mkdir -p /root/workspace'  // Create workspace under root (or any other valid directory)
             }
         }
 
