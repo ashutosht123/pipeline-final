@@ -1,15 +1,16 @@
 pipeline {
     agent {
-        dockerContainer {
+        docker {
             image 'python:3.10-slim'
             args '--user root'  // Run as root
         }
     }
 
     environment {
-        EC2_HOST = credentials('EC2_HOST')          // EC2 instance IP
-        EC2_USER = credentials('EC2_USER')          // EC2 username (e.g., ubuntu)
-        SSH_KEY_ID = credentials('8016f4f1-3a1c-439b-b5fa-b4cde16c68bd')  // SSH private key credential in Jenkins
+        DOCKER_HOST = 'tcp://localhost:2375'  // Set Docker host for Jenkins
+        EC2_HOST = credentials('EC2_HOST')          
+        EC2_USER = credentials('EC2_USER')          
+        SSH_KEY_ID = credentials('8016f4f1-3a1c-439b-b5fa-b4cde16c68bd')  
     }
 
     stages {
@@ -29,23 +30,14 @@ pipeline {
                     python3 -m pip install --upgrade pip
                     
                     # Install required dependencies
-                    if [ -f requirements.txt ]; then
-                        pip install -r requirements.txt
-                    fi
+                    pip install -r requirements.txt
                 '''
             }
         }
 
         stage('Retrain the Model') {
             steps {
-                sh '''
-                    if [ -f train.py ]; then
-                        python3 train.py
-                    else
-                        echo "train.py not found!"
-                        exit 1
-                    fi
-                '''
+                sh 'python3 train.py'
             }
         }
 
@@ -53,16 +45,8 @@ pipeline {
             steps {
                 sshagent(credentials: ["8016f4f1-3a1c-439b-b5fa-b4cde16c68bd"]) {
                     sh '''
-                        # Ensure the model directory exists on EC2
                         ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} "mkdir -p /home/${EC2_USER}/models && chmod 755 /home/${EC2_USER}/models"
-
-                        # Copy the trained model to EC2
-                        if ls models/model_*.pkl 1> /dev/null 2>&1; then
-                            scp -o StrictHostKeyChecking=no models/model_*.pkl ${EC2_USER}@${EC2_HOST}:/home/${EC2_USER}/models/
-                        else
-                            echo "No model files found to copy!"
-                            exit 1
-                        fi
+                        scp -o StrictHostKeyChecking=no models/model_*.pkl ${EC2_USER}@${EC2_HOST}:/home/${EC2_USER}/models/
                     '''
                 }
             }
