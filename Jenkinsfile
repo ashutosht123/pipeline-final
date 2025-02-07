@@ -2,21 +2,18 @@ pipeline {
     agent {
         docker {
             image 'python:3.10-slim'
-            args '--user root'  // Removed -w /workspace to use the default working directory
+            args '--user root'  // Ensures we have permissions to create directories
         }
     }
 
     environment {
-        DOCKER_HOST = 'npipe:////./pipe/docker_engine'  // Adjusted for Windows Docker Desktop
-        EC2_HOST = credentials('EC2_HOST')          
-        EC2_USER = credentials('EC2_USER')          
-        SSH_KEY_ID = credentials('8016f4f1-3a1c-439b-b5fa-b4cde16c68bd')  
+        WORKDIR = '/workspace'  // Define a valid working directory inside the container
     }
 
     stages {
-        stage('Prepare') {
+        stage('Prepare Workspace') {
             steps {
-                sh 'mkdir -p /root/workspace'  // Create workspace under root (or any other valid directory)
+                sh 'mkdir -p $WORKDIR && chmod 777 $WORKDIR'
             }
         }
 
@@ -30,12 +27,8 @@ pipeline {
             steps {
                 sh '''
                     apt-get update && apt-get install -y openssh-client
-                    
-                    # Ensure pip is installed and upgraded
                     python3 -m ensurepip
                     python3 -m pip install --upgrade pip
-                    
-                    # Install required dependencies
                     pip install -r requirements.txt
                 '''
             }
@@ -49,7 +42,7 @@ pipeline {
 
         stage('Deploy Model to EC2') {
             steps {
-                sshagent(credentials: ["8016f4f1-3a1c-439b-b5fa-b4cde16c68bd"]) {
+                sshagent(credentials: ['8016f4f1-3a1c-439b-b5fa-b4cde16c68bd']) {
                     sh '''
                         ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} "
                             mkdir -p /home/${EC2_USER}/models && chmod 755 /home/${EC2_USER}/models
@@ -62,7 +55,7 @@ pipeline {
 
         stage('Verify Deployment') {
             steps {
-                sshagent(credentials: ["8016f4f1-3a1c-439b-b5fa-b4cde16c68bd"]) {
+                sshagent(credentials: ['8016f4f1-3a1c-439b-b5fa-b4cde16c68bd']) {
                     sh '''
                         ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} "ls -l /home/${EC2_USER}/models"
                     '''
