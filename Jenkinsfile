@@ -2,12 +2,12 @@ pipeline {
     agent {
         docker {
             image 'python:3.10-slim'
-            args '--user root'  // Run as root
+            args '--user root -w /home/workspace'  // Using a valid absolute path
         }
     }
 
     environment {
-        DOCKER_HOST = 'tcp://localhost:2375'  // Set Docker host for Jenkins
+        DOCKER_HOST = 'tcp://localhost:2375'  // Docker host for Jenkins
         EC2_HOST = credentials('EC2_HOST')          
         EC2_USER = credentials('EC2_USER')          
         SSH_KEY_ID = credentials('8016f4f1-3a1c-439b-b5fa-b4cde16c68bd')  
@@ -51,14 +51,24 @@ pipeline {
                 }
             }
         }
+
+        stage('Verify Deployment') {
+            steps {
+                sshagent(credentials: ["8016f4f1-3a1c-439b-b5fa-b4cde16c68bd"]) {
+                    sh '''
+                        ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} "ls -l /home/${EC2_USER}/models"
+                    '''
+                }
+            }
+        }
     }
 
     post {
         success {
-            echo 'Model retrained and deployed successfully!'
+            echo '✅ Model retrained and deployed successfully!'
         }
         failure {
-            echo 'Pipeline failed!'
+            echo '❌ Pipeline failed! Check the logs for details.'
         }
     }
 }
