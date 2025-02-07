@@ -1,6 +1,6 @@
 pipeline {
     agent {
-        dockerConatiner {
+        dockerContainer {
             image 'python:3.10-slim'
             args '--user root'  // Run as root
         }
@@ -9,7 +9,7 @@ pipeline {
     environment {
         EC2_HOST = credentials('EC2_HOST')          // EC2 instance IP
         EC2_USER = credentials('EC2_USER')          // EC2 username (e.g., ubuntu)
-        SSH_KEY_ID = credentials('8016f4f1-3a1c-439b-b5fa-b4cde16c68bd')      // ID of the SSH private key credential in Jenkins
+        SSH_KEY_ID = credentials('8016f4f1-3a1c-439b-b5fa-b4cde16c68bd')  // SSH private key credential in Jenkins
     }
 
     stages {
@@ -29,7 +29,9 @@ pipeline {
                     python3 -m pip install --upgrade pip
                     
                     # Install required dependencies
-                    pip install -r requirements.txt
+                    if [ -f requirements.txt ]; then
+                        pip install -r requirements.txt
+                    fi
                 '''
             }
         }
@@ -37,7 +39,12 @@ pipeline {
         stage('Retrain the Model') {
             steps {
                 sh '''
-                    python3 train.py
+                    if [ -f train.py ]; then
+                        python3 train.py
+                    else
+                        echo "train.py not found!"
+                        exit 1
+                    fi
                 '''
             }
         }
@@ -50,7 +57,12 @@ pipeline {
                         ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} "mkdir -p /home/${EC2_USER}/models && chmod 755 /home/${EC2_USER}/models"
 
                         # Copy the trained model to EC2
-                        scp -o StrictHostKeyChecking=no models/model_*.pkl ${EC2_USER}@${EC2_HOST}:/home/${EC2_USER}/models/
+                        if ls models/model_*.pkl 1> /dev/null 2>&1; then
+                            scp -o StrictHostKeyChecking=no models/model_*.pkl ${EC2_USER}@${EC2_HOST}:/home/${EC2_USER}/models/
+                        else
+                            echo "No model files found to copy!"
+                            exit 1
+                        fi
                     '''
                 }
             }
