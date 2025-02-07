@@ -1,6 +1,6 @@
 pipeline {
     agent {
-        docker {
+        dockerConatiner {
             image 'python:3.10-slim'
             args '--user root'  // Run as root
         }
