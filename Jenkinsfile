@@ -2,7 +2,7 @@ pipeline {
     agent {
         docker {
             image 'python:3.10-slim'
-            args '--user root -w /home/workspace'  // Using a valid absolute path
+            args '--user root -w /'  // Set working directory to root
         }
     }
 
@@ -14,6 +14,12 @@ pipeline {
     }
 
     stages {
+        stage('Prepare Workspace') {
+            steps {
+                sh 'mkdir -p /workspace'  // Ensure workspace exists
+            }
+        }
+
         stage('Checkout Repository') {
             steps {
                 checkout scm
@@ -45,7 +51,9 @@ pipeline {
             steps {
                 sshagent(credentials: ["8016f4f1-3a1c-439b-b5fa-b4cde16c68bd"]) {
                     sh '''
-                        ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} "mkdir -p /home/${EC2_USER}/models && chmod 755 /home/${EC2_USER}/models"
+                        ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} "
+                            mkdir -p /home/${EC2_USER}/models && chmod 755 /home/${EC2_USER}/models
+                        "
                         scp -o StrictHostKeyChecking=no models/model_*.pkl ${EC2_USER}@${EC2_HOST}:/home/${EC2_USER}/models/
                     '''
                 }
