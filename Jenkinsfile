@@ -9,7 +9,7 @@ pipeline {
     environment {
         EC2_HOST = credentials('EC2_HOST')          // EC2 instance IP
         EC2_USER = credentials('EC2_USER')          // EC2 username (e.g., ubuntu)
-        SSH_KEY_ID = credentials('cbde2a97-22ad-4d2c-8d12-932d1fecda79')      // ID of the SSH private key credential in Jenkins
+        SSH_KEY_ID = credentials('8016f4f1-3a1c-439b-b5fa-b4cde16c68bd')      // ID of the SSH private key credential in Jenkins
     }
 
     stages {
@@ -44,7 +44,7 @@ pipeline {
 
         stage('Deploy Model to EC2') {
             steps {
-                sshagent(credentials: ["cbde2a97-22ad-4d2c-8d12-932d1fecda79"]) {
+                sshagent(credentials: ["8016f4f1-3a1c-439b-b5fa-b4cde16c68bd"]) {
                     sh '''
                         # Ensure the model directory exists on EC2
                         ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} "mkdir -p /home/${EC2_USER}/models && chmod 755 /home/${EC2_USER}/models"
