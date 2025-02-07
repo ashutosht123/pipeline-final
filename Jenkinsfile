@@ -2,7 +2,7 @@ pipeline {
     agent {
         docker {
             image 'python:3.10-slim'
-            args '--user root -w /'  // Set working directory to root
+            args '--user root -w /workspace'  // Set working directory
         }
     }
 
@@ -14,7 +14,7 @@ pipeline {
     }
 
     stages {
-        stage('Prepare Workspace') {
+        stage('Prepare') {
             steps {
                 sh 'mkdir -p /workspace'  // Ensure workspace exists
             }
